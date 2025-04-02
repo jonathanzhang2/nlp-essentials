@@ -163,7 +163,6 @@ def sentiment_analyzer(trn_dat: list[tuple[int, str]], tst_dat: list[tuple[int, 
 
 
 # region MLP Implementation
-
 Vector: TypeAlias = list[int | float]
 Bias: TypeAlias = list[float]
 Weights: TypeAlias = list[Vector]
@@ -294,6 +293,10 @@ class MLP:
         ]
         self.layers.append(Linear(in_features=dims[-2], out_features=dims[-1], activation_fn=Softmax(), lr=self.lr))
         self.loss_fn = CrossEntropyLoss()
+        
+    @cached_property
+    def num_parameters(self) -> int:
+        return sum(layer.out_features*layer.in_features+layer.out_features for layer in self.layers)
     
     def forward(self, x: list[SparseVector | Vector]) -> Activations:
         self.inputs, out = [x], x
@@ -306,7 +309,7 @@ class MLP:
         for i in reversed(range(len(self.layers))):
             gradient = self.layers[i].activation_fn.derivative(x=self.inputs[i+1], gradient_flow=gradient)
             gradient = self.layers[i].backward(gradient_flow=gradient)
-# endregion
+
 
 
 def onehot(labels: list[int], num_classes: int) -> list[Vector]:
@@ -323,6 +326,7 @@ def train(
         'Average Training Accuracy': [None]*epochs
     }
     
+    if verbose: print(f'Training MLP, number of parameters: {model.num_parameters:,}')
     for epoch in range(epochs):
         random.shuffle((combined := list(zip(xtrain, ytrain))))
         xtrain[:], ytrain[:] = zip(*combined)
@@ -353,6 +357,73 @@ def predict(model: MLP, x: list[Vector | SparseVector]) -> list[tuple[int, float
         [(i := max(enumerate(probability_vector), key=lambda x: x[1]))[0], i[1]] 
         for probability_vector in model.forward(x)
     ]
+# endregion
+
+
+
+# region Naive Bayes Implementation
+class NaiveBayes:
+    def __init__(self, alpha=1.0):
+        self.alpha = alpha
+        self.classes = set()
+        self.class_count = {}
+        self.feature_count = {}
+        self.total_feature_count = {}
+        self.prior = {}
+        self.likelihood = {}
+        self.vocabulary = set()
+        
+    def fit(self, X, y):
+        n = len(y)
+        self.classes = set(y)
+        self.class_count = Counter(y)
+        for xi, yi in zip(X, y):
+            if yi not in self.feature_count:
+                self.feature_count[yi] = {}
+                self.total_feature_count[yi] = 0
+            for feature, value in xi.items():
+                self.vocabulary.add(feature)
+                self.feature_count[yi][feature] = self.feature_count[yi].get(feature, 0) + value
+                self.total_feature_count[yi] += value
+        
+        vocab_size = len(self.vocabulary)
+        for yi in self.classes:
+            self.prior[yi] = self.class_count[yi]/n
+            
+        for yi in self.classes:
+            self.likelihood[yi] = {}
+            total = self.total_feature_count[yi]
+            for feature in self.vocabulary:
+                count = self.feature_count[yi].get(feature, 0)
+                self.likelihood[yi][feature] = (count + self.alpha) / (total + self.alpha * vocab_size)
+
+    def _predict_instance(self, x):
+        vocab_size = len(self.vocabulary)
+        log_probs = {}
+
+        for yi in self.classes:
+            total = self.total_feature_count[yi]
+            log_prob = math.log(self.prior[yi])
+            for feature, value in x.items():
+                if feature in self.vocabulary:
+                    prob = self.likelihood[yi].get(feature, self.alpha / (total + self.alpha * vocab_size))
+                else:
+                    prob = self.alpha / (total + self.alpha * vocab_size)
+                log_prob += value * math.log(prob)
+            log_probs[yi] = log_prob
+
+        max_log = max(log_probs.values())
+        exp_probs = {label: math.exp(lp - max_log) for label, lp in log_probs.items()}
+        total_exp = sum(exp_probs.values())
+        probs = {label: exp_val / total_exp for label, exp_val in exp_probs.items()}
+
+        best_label = max(probs, key=probs.get)
+        best_prob = probs[best_label]
+        return best_label, best_prob
+
+    def predict(self, X):
+        return [self._predict_instance(x) for x in X]
+# endregion
 
 
 def sentiment_analyzer_extra(trn_dat: list[tuple[int, str]], tst_dat: list[tuple[int, str]]) -> list[tuple[int, float]]:
@@ -362,6 +433,11 @@ def sentiment_analyzer_extra(trn_dat: list[tuple[int, str]], tst_dat: list[tuple
     tfidf = TFIDFVectorizor(stop_words=stop_words, punctuations=True, stop_word_downweight=0.05)
     xtrain = tfidf.fit_transform(documents=train_documents)
     xtest = tfidf.transform(documents=test_documents)
+    
+    nb = NaiveBayes(alpha=1.0)
+    nb.fit(X=xtrain, y=ytrain)
+    return nb.predict(X=xtest)
+    
     ytrain = onehot(labels=ytrain, num_classes=len(set(ytrain)))
     
     model = MLP(in_features=len(tfidf.vocabulary), out_features=len(ytrain[0]), hidden_dims=[8], lr=0.2)
