@@ -439,7 +439,6 @@ def sentiment_analyzer_extra(trn_dat: list[tuple[int, str]], tst_dat: list[tuple
     return nb.predict(X=xtest)
     
     ytrain = onehot(labels=ytrain, num_classes=len(set(ytrain)))
-    
     model = MLP(in_features=len(tfidf.vocabulary), out_features=len(ytrain[0]), hidden_dims=[8], lr=0.2)
     model = train(model=model, xtrain=xtrain, ytrain=ytrain, epochs=6, batch_size=64, verbose=True)
     return predict(model=model, x=xtest)
@@ -448,7 +447,7 @@ def sentiment_analyzer_extra(trn_dat: list[tuple[int, str]], tst_dat: list[tuple
 if __name__ == '__main__':
     trn_dat = read('/Users/jonathan/Desktop/Emory/CS 329/nlp-essentials/dat/sentiment_treebank/sst_trn.tsv')
     dev_dat = read('/Users/jonathan/Desktop/Emory/CS 329/nlp-essentials/dat/sentiment_treebank/sst_dev.tsv')
-    preds = sentiment_analyzer_extra(trn_dat, dev_dat)
+    preds = sentiment_analyzer(trn_dat, dev_dat)
 
     correct = 0
     for i, (pred, score) in enumerate(preds):
