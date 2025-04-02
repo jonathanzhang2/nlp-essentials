@@ -253,26 +253,25 @@ class Linear:
         return self.activation_fn(out)
     
     def backward(self, gradient_flow: Activations) -> list[Vector]:
+        access_xi = lambda xi, k: xi[k]
+        if isinstance(self.input[0], dict):
+            access_xi = lambda xi, k: xi.get(k, 0.0)
+        
         batch_size = len(gradient_flow)
         weights_gradient = [[0.0 for _ in range(self.in_features)] for _ in range(self.out_features)]
         bias_gradient = [0.0 for _ in range(self.out_features)]
         
-        gradient_input = [None]*batch_size
+        gradient_input = [[0.0 for _ in range(self.in_features)] for _ in range(batch_size)]
         
         for i in range(batch_size):
             # backward gradient flow
             xi, gi_flow = self.input[i], gradient_flow[i]
-            gradient_input[i] = [
-                sum(self.weights[j][k]*gi_flow[j] for j in range(self.out_features))
-                for k in range(self.in_features)
-            ]
-            
-            # gradient accumulation
             for j in range(self.out_features):
                 for k in range(self.in_features):
-                    weights_gradient[j][k] += gi_flow[j]*(xi[k] if isinstance(xi, list) else xi.get(k, 0.0))
+                    gradient_input[i][k] += self.weights[j][k]*gi_flow[j]
+                    weights_gradient[j][k] += gi_flow[j]*access_xi(xi=xi, k=k)
                 bias_gradient[j] += gi_flow[j]
-        
+            
         # gradient update
         for j in range(self.out_features):
             for k in range(self.in_features):
@@ -365,8 +364,8 @@ def sentiment_analyzer_extra(trn_dat: list[tuple[int, str]], tst_dat: list[tuple
     xtest = tfidf.transform(documents=test_documents)
     ytrain = onehot(labels=ytrain, num_classes=len(set(ytrain)))
     
-    model = MLP(in_features=len(tfidf.vocabulary), out_features=len(ytrain[0]), hidden_dims=[16], lr=0.2)
-    model = train(model=model, xtrain=xtrain, ytrain=ytrain, epochs=10, batch_size=32, verbose=True)
+    model = MLP(in_features=len(tfidf.vocabulary), out_features=len(ytrain[0]), hidden_dims=[8], lr=0.2)
+    model = train(model=model, xtrain=xtrain, ytrain=ytrain, epochs=6, batch_size=64, verbose=True)
     return predict(model=model, x=xtest)
 
 
