@@ -20,13 +20,9 @@ def bigram_model(filepath: str) -> Bigram:
              - Inner key is current word (including UNKNOWN)
              - Value is P(current|previous) probability
     """
-    prev, text = '', list()
-    book, chapter = re.compile(pattern=r'\(\s\d{4}\s\)'), re.compile(pattern=r'[Cc][Hh][Aa][Pp][Tt][Ee][Rr]\s[IVXLCDM]+\n')
+    text = list()
     with open(file=filepath, mode='r') as file:
-        for line in file:
-            if not prev and not chapter.search(string=line) and not book.search(string=line):
-                text.append(INIT + ' ' + line.rstrip('\n'))
-            prev = chapter.search(string=line)
+        text = [INIT + ' ' + line.rstrip('\n') for line in file]
     
     bigrams = defaultdict(Counter)
     [bigrams[words[i - 1]].update([words[i]]) for line in text if (words := line.split()) for i in range(1, len(words))]
@@ -37,8 +33,8 @@ def bigram_model(filepath: str) -> Bigram:
         (smoothed_ccs := {word: (count+1)/total for word, count in ccs.items()}).update({UNKNOWN: unknown_prob})
         min_unknown_prob = min(min_unknown_prob, unknown_prob)
         probs[prev] = smoothed_ccs
-    probs[UNKNOWN] = min_unknown_prob
-    
+    probs[UNKNOWN] = defaultdict(lambda: min_unknown_prob)
+
     return probs
 
 
