@@ -29,11 +29,11 @@ def bigram_model(filepath: str) -> Bigram:
 
     probs, min_unknown_prob = dict(), 1
     for prev, ccs in bigrams.items():
-        unknown_prob = 1/(total := sum(ccs.values()) + len(set(ccs.keys())) + 1)
+        unknown_prob = 1/(total := sum(ccs.values()) + len(set(ccs.keys())))
         (smoothed_ccs := {word: (count+1)/total for word, count in ccs.items()}).update({UNKNOWN: unknown_prob})
         min_unknown_prob = min(min_unknown_prob, unknown_prob)
         probs[prev] = smoothed_ccs
-    probs[UNKNOWN] = defaultdict(lambda: min_unknown_prob)
+    probs[UNKNOWN] = min_unknown_prob
 
     return probs
 
