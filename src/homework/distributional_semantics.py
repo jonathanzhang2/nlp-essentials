@@ -15,9 +15,13 @@ def cosine(u: np.ndarray, v: np.ndarray) -> float:
 
 
 def similar_words(word_embeddings: dict[str, np.ndarray], target_word: str, threshold: float=0.8) -> list[tuple[str, float]]:
+    # what if target word not in embeddings
     # might need to skip target word?
     u = word_embeddings[target_word]
-    scores = [(word, score) for word, v in word_embeddings.items() if (score := cosine(u=u, v=v)) >= threshold]
+    scores = [
+        (word, score) for word, v in word_embeddings.items() 
+        if word != target_word and (score := cosine(u=u, v=v)) >= threshold
+    ]
     return sorted(scores, key=lambda twotuple: (twotuple[1], twotuple[0]), reverse=True)
 
 
@@ -34,4 +38,5 @@ if __name__ == '__main__':
     print(similar_words(word_embeddings, 'America', 0.8))
     d1 = 'I love this movie'
     d2 = 'I hate this movie'
+    print(document_similarity(word_embeddings, "Japanese computer love Sunday", "Sunday morning is Pentecostal"))
     print(document_similarity(word_embeddings, d1, d2))
