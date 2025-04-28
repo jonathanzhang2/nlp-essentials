@@ -15,8 +15,6 @@ def cosine(u: np.ndarray, v: np.ndarray) -> float:
 
 
 def similar_words(word_embeddings: dict[str, np.ndarray], target_word: str, threshold: float=0.8) -> list[tuple[str, float]]:
-    # what if target word not in embeddings
-    # might need to skip target word?
     u = word_embeddings[target_word]
     scores = [
         (word, score) for word, v in word_embeddings.items() 
