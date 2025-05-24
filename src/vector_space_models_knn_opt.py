@@ -52,7 +52,7 @@ def optuna_worker(documents: list[Document], labels: list[int], storage_url: str
 
 
 if __name__ == '__main__':
-    trn_dat = read('/Users/jonathan/Desktop/Emory/CS 329/nlp-essentials/dat/sentiment_treebank/sst_trn.tsv')
+    trn_dat = read('dat/sentiment_treebank/sst_trn.tsv')
     train_documents, ytrain = preprocess(trn_dat)
     
     num_workers, trials_per_worker = 8, 5

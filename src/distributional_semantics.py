@@ -32,7 +32,7 @@ def document_similarity(word_embeddings: dict[str, np.ndarray], d1: str, d2: str
 
 
 if __name__ == '__main__':
-    word_embeddings = read_word_embeddings(filepath='/Users/jonathan/Desktop/Emory/CS 329/nlp-essentials/dat/word_embeddings.txt')
+    word_embeddings = read_word_embeddings(filepath='dat/word_embeddings.txt')
     print(similar_words(word_embeddings, 'America', 0.8))
     d1 = 'I love this movie'
     d2 = 'I hate this movie'
